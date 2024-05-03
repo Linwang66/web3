@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Application</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        .chat-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .conversation {
+            padding: 20px;
+            overflow-y: auto;
+            height: 400px;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .message-bot {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .message-text {
+            max-width: 70%;
+            padding: 10px;
+            background-color: #f2f2f2;
+            border-radius: 8px;
+            margin: 0 10px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin-right: 10px;
+            background-size: cover;
+            background-repeat: no-repeat;
+        }
+
+        .user-avatar {
+            background-image: url('./user-avatar.png');
+        }
+
+        .bot-avatar {
+            background-image: url('./bot-avatar.png');
+        }
+
+        .input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+
+        .send-button,
+        .upload-button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="conversation" id="conversation"></div>
+        <div class="input-container">
+            <input type="text" id="messageInput" class="chat-input" placeholder="Enter your question...">
+            <button onclick="sendMessage()" class="send-button">&#x279C;</button>
+            <button onclick="document.getElementById('imageInput').click()" class="upload-button">&#x1F4F7;</button>
+            <input type="file" id="imageInput" style="display: none;" accept="image/*" onchange="uploadImage()">
+        </div>
+    </div>
+
+    <script>
+        function sendMessage() {
+            var message = document.getElementById("messageInput").value;
+            var conversation = document.getElementById("conversation");
+
+            var userMessage = document.createElement("div");
+            userMessage.className = "message message-user";
+            userMessage.innerHTML = `
+                <div class="message-avatar user-avatar"></div>
+                <div class="message-text">${message}</div>
+            `;
+            conversation.appendChild(userMessage);
+
+            fetch("http://127.0.0.1:8806/api/chat?message=" + encodeURIComponent(message), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    var botMessage = document.createElement("div");
+                    botMessage.className = "message message-bot";
+                    botMessage.innerHTML = `
+                        <div class="message-avatar bot-avatar"></div>
+                        <div class="message-text">${data.message}</div>
+                    `;
+                    conversation.appendChild(botMessage);
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                });
+
+            document.getElementById("messageInput").value = '';
+        }
+
+        function uploadImage() {
+            var fileInput = document.getElementById("imageInput");
+            var file = fileInput.files[0];
+            var formData = new FormData();
+            formData.append("image", file);
+
+            var conversation = document.getElementById("conversation");
+            var userMessage = document.createElement("div");
+            userMessage.className = "message message-user";
+            userMessage.innerHTML = `
+                <div class="message-avatar user-avatar"></div>
+                <div class="message-text">
+                    <img src="${URL.createObjectURL(file)}" alt="user-image" style="max-width: 100%;">
+                </div>
+            `;
+            conversation.appendChild(userMessage);
+
+            fetch("http://127.0.0.1:8806/api/upload", {
+                method: "POST",
+                body: formData,
+            })
+                .then((response) => {
+                    if (!response.ok) {
+                        throw new Error("Network response was not ok");
+                    }
+                    return response.json();
+                })
+                .then((data) => {
+                    console.log("Image uploaded:", data);
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                });
+        }
+    </script>
+</body>
+
+</html>
